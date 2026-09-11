@@ -1,5 +1,6 @@
 #![no_std]
 #![no_main]
+
 mod baro;
 mod demo;
 mod imu;
@@ -8,30 +9,27 @@ mod main_controller;
 mod motor;
 mod utils;
 
-use core::f32::consts::PI;
-
-use bme280_rs::{AsyncBme280, Bme280};
+use bme280_rs::AsyncBme280;
 use embassy_executor::Spawner;
 use embassy_stm32::{
     bind_interrupts, dma,
     gpio::{Output, OutputType},
     i2c,
-    mode::{Async, Blocking},
+    mode::Async,
     peripherals::{self, TIM2, TIM3},
-    timer::{
-        GeneralInstance4Channel,
-        simple_pwm::{PwmPin, SimplePwm},
-    },
-    usart::{UartRx, UartTx},
+    timer::simple_pwm::{PwmPin, SimplePwm},
+    usart::UartRx,
 };
 use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel, signal::Signal,
 };
-use embassy_time::{Delay, Duration, Timer};
-use embedded_hal::delay::DelayNs;
-use log::{Level, Metadata, Record, debug, error, info};
+use embassy_task_watchdog::{
+    WatchdogConfig, create_watchdog,
+    embassy_stm32::{TaskWatchdog, WatchdogRunner},
+};
+use embassy_time::{Duration, Timer};
+use log::{error, info};
 use panic_probe as _;
-use rtt_target::rprintln;
 use static_cell::StaticCell;
 
 use crate::{
@@ -68,7 +66,7 @@ async fn main(spawner: Spawner) {
     rtt_target::rtt_init_print!();
     info!("Starting initialization");
     let p = embassy_stm32::init(Default::default());
-    let mut led = Output::new(
+    let led = Output::new(
         p.PA5,
         embassy_stm32::gpio::Level::Low,
         embassy_stm32::gpio::Speed::Low,
@@ -150,12 +148,21 @@ async fn main(spawner: Spawner) {
         embassy_stm32::i2c::Config::default(),
     );
 
-    spawner.spawn(imu_reader(i2c_imu).unwrap());
-    // spawner.spawn(baro_reader(i2c_baro).unwrap());
+    let wd_config = WatchdogConfig::default();
+    let (task_watchdog, watchdog_runner) = create_watchdog!(p.IWDG, wd_config);
+
+    spawner.spawn(watchdog_task(watchdog_runner).unwrap());
+    spawner.spawn(imu_reader(task_watchdog, i2c_imu).unwrap());
+    spawner.spawn(baro_reader(task_watchdog, i2c_baro).unwrap());
     spawner.spawn(controller_command_reader(uart_rx).unwrap());
     spawner.spawn(update_motor(motor).unwrap());
     spawner.spawn(main_controller().unwrap());
     spawner.spawn(heartbeat(led).unwrap());
+}
+
+#[embassy_executor::task]
+async fn watchdog_task(watchdog_runner: WatchdogRunner) {
+    watchdog_runner.run().await;
 }
 
 #[embassy_executor::task]
@@ -175,14 +182,15 @@ async fn controller_command_reader(mut uart_rx: UartRx<'static, Async>) {
         }
     }
 }
-#[embassy_executor::task]
+#[embassy_task_watchdog::task(timeout=Duration::from_millis(2000))]
 async fn imu_reader(
+    watchdog: TaskWatchdog,
     i2c_imu: embassy_stm32::i2c::I2c<
         'static,
         embassy_stm32::mode::Async,
         embassy_stm32::i2c::Master,
     >,
-) {
+) -> ! {
     let mut imu = Mpu6050IMU::new(i2c_imu).await;
     let mut pitch = imu.pitch_only().await;
     info!("pitch is {} rad", pitch);
@@ -205,17 +213,19 @@ async fn imu_reader(
         CONTROL_COMMANDS_QUEUE
             .send(Event::HeadingUpdated(heading))
             .await;
+        watchdog.feed().await;
     }
 }
 
-#[embassy_executor::task]
+#[embassy_task_watchdog::task(timeout=Duration::from_millis(2000))]
 async fn baro_reader(
+    watchdog: TaskWatchdog,
     i2c_baro: embassy_stm32::i2c::I2c<
         'static,
         embassy_stm32::mode::Async,
         embassy_stm32::i2c::Master,
     >,
-) {
+) -> ! {
     let mut bme280 = AsyncBme280::new(i2c_baro, embassy_time::Delay);
     bme280.init().await.unwrap();
 
@@ -236,10 +246,11 @@ async fn baro_reader(
     info!("Calibrated pressure: {} Pa", initial_pressure);
     loop {
         let current_pressure = calibrated_pressure(&mut bme280).await;
-        // info!(
-        //     "Altitude is: {} m",
-        //     calculate_altitude(initial_pressure, current_pressure)
-        // );
+        info!(
+            "Altitude is: {} m",
+            calculate_altitude(initial_pressure, current_pressure)
+        );
+        watchdog.feed().await;
     }
 }
 

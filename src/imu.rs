@@ -1,12 +1,9 @@
-use embassy_stm32::mode::Async;
 use embassy_time::{Duration, with_timeout};
-use embedded_hal_async::delay::DelayNs;
 use log::info;
-use mpu6050_async::{Mpu6050, PI};
+use mpu6050_async::Mpu6050;
 
 use micromath::F32Ext;
 
-const G: f32 = 9.80665;
 pub struct Mpu6050IMU<I2C: embedded_hal_async::i2c::I2c> {
     mpu: Mpu6050<I2C>,
     is_up: bool,

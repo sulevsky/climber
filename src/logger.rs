@@ -1,6 +1,5 @@
 use core::fmt::Write;
 use embassy_stm32::mode::Async;
-use embassy_stm32::peripherals::USART1;
 use embassy_stm32::usart::UartTx;
 use heapless::String;
 use log::{Level, LevelFilter, Metadata, Record, SetLoggerError};

@@ -7,10 +7,14 @@ use embassy_stm32::{
 use log::trace;
 
 use crate::utils::map_in_range;
-const IN_PWM_VALUE: Range<u32> = 0..256;
+
+const MAX_IN_MOTOR_VALUE: u32 = 255;
+const MIN_IN_MOTOR_VALUE: i16 = -255;
+const ABS_IN_PWM_RANGE: Range<u32> = 0..256;
+
 const CALIBRATED_PWM_VALUE_FORWARD: Range<u32> = 100..190;
 const CALIBRATED_PWM_VALUE_BACKWARD: Range<u32> = 100..211;
-const MAX_PWM_VALUE: u32 = 255;
+
 pub struct Motors<'d, CHL: GeneralInstance4Channel, CHR: GeneralInstance4Channel> {
     left_f_b: Output<'d>,
     left_pwm: SimplePwmChannel<'d, CHL>,
@@ -20,13 +24,13 @@ pub struct Motors<'d, CHL: GeneralInstance4Channel, CHR: GeneralInstance4Channel
 
 #[derive(Clone)]
 pub struct MotorsPower {
-    // -255 - +255
     pub left: i16,
-    // -255 - +255
     pub right: i16,
 }
 impl MotorsPower {
     pub fn new(left: i16, right: i16) -> MotorsPower {
+        assert!((-MIN_IN_MOTOR_VALUE..=MAX_IN_MOTOR_VALUE as i16).contains(&left));
+        assert!((-MIN_IN_MOTOR_VALUE..=MAX_IN_MOTOR_VALUE as i16).contains(&right));
         Self { left, right }
     }
     pub fn stop() -> MotorsPower {
@@ -59,28 +63,28 @@ impl<'d, CHL: GeneralInstance4Channel, CHR: GeneralInstance4Channel> Motors<'d, 
             self.left_f_b.set_low();
             let fraction = map_in_range(
                 motors_power.left.abs() as u32,
-                IN_PWM_VALUE,
+                ABS_IN_PWM_RANGE,
                 CALIBRATED_PWM_VALUE_BACKWARD,
             );
             trace!(
                 "b l {}/{} init l/r {}/{}",
-                fraction, MAX_PWM_VALUE, motors_power.left, motors_power.right
+                fraction, MAX_IN_MOTOR_VALUE, motors_power.left, motors_power.right
             );
             self.left_pwm
-                .set_duty_cycle_fraction(fraction, MAX_PWM_VALUE);
+                .set_duty_cycle_fraction(fraction, MAX_IN_MOTOR_VALUE);
         } else {
             self.left_f_b.set_high();
             let fraction = map_in_range(
-                MAX_PWM_VALUE - motors_power.left.abs() as u32,
-                IN_PWM_VALUE,
+                MAX_IN_MOTOR_VALUE - motors_power.left.abs() as u32,
+                ABS_IN_PWM_RANGE,
                 CALIBRATED_PWM_VALUE_FORWARD,
             );
             trace!(
                 "f l {}/{} init l/r {}/{}",
-                fraction, MAX_PWM_VALUE, motors_power.left, motors_power.right
+                fraction, MAX_IN_MOTOR_VALUE, motors_power.left, motors_power.right
             );
             self.left_pwm
-                .set_duty_cycle_fraction(fraction, MAX_PWM_VALUE);
+                .set_duty_cycle_fraction(fraction, MAX_IN_MOTOR_VALUE);
         }
         if motors_power.right == 0 {
             self.right_f_b.set_low();
@@ -89,28 +93,28 @@ impl<'d, CHL: GeneralInstance4Channel, CHR: GeneralInstance4Channel> Motors<'d, 
             self.right_f_b.set_low();
             let fraction = map_in_range(
                 motors_power.right.abs() as u32,
-                IN_PWM_VALUE,
+                ABS_IN_PWM_RANGE,
                 CALIBRATED_PWM_VALUE_BACKWARD,
             );
             trace!(
                 "b r {}/{} init l/r {}/{}",
-                fraction, MAX_PWM_VALUE, motors_power.left, motors_power.right
+                fraction, MAX_IN_MOTOR_VALUE, motors_power.left, motors_power.right
             );
             self.right_pwm
-                .set_duty_cycle_fraction(fraction, MAX_PWM_VALUE);
+                .set_duty_cycle_fraction(fraction, MAX_IN_MOTOR_VALUE);
         } else {
             self.right_f_b.set_high();
             let fraction = map_in_range(
-                MAX_PWM_VALUE - motors_power.right.abs() as u32,
-                IN_PWM_VALUE,
+                MAX_IN_MOTOR_VALUE - motors_power.right.abs() as u32,
+                ABS_IN_PWM_RANGE,
                 CALIBRATED_PWM_VALUE_FORWARD,
             );
             trace!(
                 "f r {}/{} init l/r {}/{}",
-                fraction, MAX_PWM_VALUE, motors_power.left, motors_power.right
+                fraction, MAX_IN_MOTOR_VALUE, motors_power.left, motors_power.right
             );
             self.right_pwm
-                .set_duty_cycle_fraction(fraction, MAX_PWM_VALUE);
+                .set_duty_cycle_fraction(fraction, MAX_IN_MOTOR_VALUE);
         }
     }
 }

@@ -3,8 +3,6 @@ use log::{error, info};
 use crate::{MOTOR_COMMANDS_SIGNAL, motor::MotorsPower};
 
 pub const NORMAL_SPEED: i16 = 150;
-const LEFT_TURN_MULTIPLIER: i16 = 70;
-const RIGHT_TURN_MULTIPLIER: i16 = 5;
 
 pub enum Event {
     UserCommand(char),

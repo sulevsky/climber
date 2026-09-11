@@ -11,12 +11,13 @@ pub enum Event {
     HeadingUpdated(f32),
 }
 
-pub struct MainController {
+#[deprecated(note = "Deprecated in favour of control station")]
+pub struct MobileAppCommnadsController {
     is_heading_alignment_mode: bool,
     current_speed: i16,
 }
 
-impl MainController {
+impl MobileAppCommnadsController {
     pub fn new() -> Self {
         Self {
             is_heading_alignment_mode: false,

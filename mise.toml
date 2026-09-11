@@ -11,8 +11,6 @@ run = "cargo run"
 alias = "b"
 run = "cargo build"
 
-
-
 [tasks.flash-monitor]
 depends = "build"
 alias = "fm"
