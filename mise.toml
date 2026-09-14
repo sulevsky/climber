@@ -2,7 +2,7 @@
 # rust = "latest"
 
 [env]
-DEFMT_LOG = "debug"
+DEFMT_LOG = "trace"
 
 [tasks.run]
 run = "cargo run"

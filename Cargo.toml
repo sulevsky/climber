@@ -17,15 +17,26 @@ embedded-hal = "1.0.0"
 embedded-hal-async = "1.0.0"
 
 log = "0.4"
-critical-section = { version= "1.2.0" }
-# critical-section ={version= "1.2.0", features = ["restore-state-bool"]}
+critical-section = { version = "1.2.0" }
 
 static_cell = "2.1.1"
 fugit = "0.3.7"
 
-embassy-stm32 = { version = "0.6.0", features = ["log", "stm32f446re", "unstable-pac", "memory-x", "time-driver-tim4", "exti", "chrono"] }
-embassy-executor = { version = "0.10.0", features = ["platform-cortex-m", "executor-thread", "log"] }
-embassy-time = { version = "0.5.1", features = ["log",  "tick-hz-32_768"] }
+embassy-stm32 = { version = "0.6.0", features = [
+    "log",
+    "stm32f446re",
+    "unstable-pac",
+    "memory-x",
+    "time-driver-tim4",
+    "exti",
+    "chrono",
+] }
+embassy-executor = { version = "0.10.0", features = [
+    "platform-cortex-m",
+    "executor-thread",
+    "log",
+] }
+embassy-time = { version = "0.5.1", features = ["log", "tick-hz-32_768"] }
 embassy-sync = { version = "0.8.0" }
 
 bme280-rs = "0.4.1"
@@ -33,8 +44,6 @@ micromath = "2.1.0"
 mpu6050-async = "0.1.0"
 
 heapless = "0.9.3"
-
-embassy-task-watchdog = { version = "0.1.0", features = ["stm32"] }
 
 [[bin]]
 name = "blinky_esp_rust"

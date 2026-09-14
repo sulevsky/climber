@@ -23,10 +23,6 @@ use embassy_stm32::{
 use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel, signal::Signal,
 };
-use embassy_task_watchdog::{
-    WatchdogConfig, create_watchdog,
-    embassy_stm32::{TaskWatchdog, WatchdogRunner},
-};
 use embassy_time::{Duration, Timer};
 use log::{error, info};
 use panic_probe as _;
@@ -148,21 +144,12 @@ async fn main(spawner: Spawner) {
         embassy_stm32::i2c::Config::default(),
     );
 
-    let wd_config = WatchdogConfig::default();
-    let (task_watchdog, watchdog_runner) = create_watchdog!(p.IWDG, wd_config);
-
-    spawner.spawn(watchdog_task(watchdog_runner).unwrap());
-    spawner.spawn(imu_reader(task_watchdog, i2c_imu).unwrap());
-    spawner.spawn(baro_reader(task_watchdog, i2c_baro).unwrap());
+    spawner.spawn(imu_reader(i2c_imu).unwrap());
+    spawner.spawn(baro_reader(i2c_baro).unwrap());
     spawner.spawn(controller_command_reader(uart_rx).unwrap());
     spawner.spawn(update_motor(motor).unwrap());
     spawner.spawn(main_controller().unwrap());
     spawner.spawn(heartbeat(led).unwrap());
-}
-
-#[embassy_executor::task]
-async fn watchdog_task(watchdog_runner: WatchdogRunner) {
-    watchdog_runner.run().await;
 }
 
 #[embassy_executor::task]
@@ -182,15 +169,14 @@ async fn controller_command_reader(mut uart_rx: UartRx<'static, Async>) {
         }
     }
 }
-#[embassy_task_watchdog::task(timeout=Duration::from_millis(2000))]
+#[embassy_executor::task]
 async fn imu_reader(
-    watchdog: TaskWatchdog,
     i2c_imu: embassy_stm32::i2c::I2c<
         'static,
         embassy_stm32::mode::Async,
         embassy_stm32::i2c::Master,
     >,
-) -> ! {
+) {
     let mut imu = Mpu6050IMU::new(i2c_imu).await;
     let mut pitch = imu.pitch_only().await;
     info!("pitch is {} rad", pitch);
@@ -213,13 +199,11 @@ async fn imu_reader(
         CONTROL_COMMANDS_QUEUE
             .send(Event::HeadingUpdated(heading))
             .await;
-        watchdog.feed().await;
     }
 }
 
-#[embassy_task_watchdog::task(timeout=Duration::from_millis(2000))]
+#[embassy_executor::task]
 async fn baro_reader(
-    watchdog: TaskWatchdog,
     i2c_baro: embassy_stm32::i2c::I2c<
         'static,
         embassy_stm32::mode::Async,
@@ -250,7 +234,6 @@ async fn baro_reader(
             "Altitude is: {} m",
             calculate_altitude(initial_pressure, current_pressure)
         );
-        watchdog.feed().await;
     }
 }
 

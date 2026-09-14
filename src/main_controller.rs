@@ -62,13 +62,13 @@ impl MainController {
                     )),
                     //left
                     'a' => Some(MotorsPower::new(
-                        increase_by_percent(self.current_speed.left, 0),
+                        -self.current_speed.left,
                         increase_by_percent(self.current_speed.right, 30),
                     )),
                     //right
                     'd' => Some(MotorsPower::new(
-                        increase_by_percent(self.current_speed.left, 20),
-                        increase_by_percent(self.current_speed.right, 0),
+                        increase_by_percent(self.current_speed.left, 30),
+                        -self.current_speed.right,
                     )),
                     //start normal speed
                     'n' => {
@@ -102,7 +102,7 @@ fn calculate_correction(heading_rad: f32, current_speed: MotorsPower) -> MotorsP
     let heading = heading_rad.to_degrees().clamp(0.0, 180.0);
     let error = heading - 90.0;
     let force = error.abs() / 90.0;
-    info!("Error {}, h: {}", error,heading);
+    info!("Error {}, h: {}", error, heading);
     if error < 0.0 {
         let l = (20.0 * P_COEFF * force) as i16;
         info!("L increase {}%", l);

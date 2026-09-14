@@ -82,7 +82,6 @@ dependencies = [
  "embassy-executor",
  "embassy-stm32",
  "embassy-sync",
- "embassy-task-watchdog",
  "embassy-time",
  "embedded-hal 1.0.0",
  "embedded-hal-async",
@@ -388,47 +387,6 @@ dependencies = [
  "futures-sink",
  "heapless",
 ]
-
-[[package]]
-name = "embassy-task-watchdog"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84c50b18604d05ce3a6f13d272f3767bb766e4bc03c2a71e2b7cf406eac24891"
-dependencies = [
- "cortex-m",
- "cortex-m-rt",
- "critical-section",
- "embassy-embedded-hal",
- "embassy-executor",
- "embassy-stm32",
- "embassy-sync",
- "embassy-task-watchdog-macros",
- "embassy-task-watchdog-numtasks",
- "embassy-time",
- "heapless",
- "panic-probe",
- "paste",
- "portable-atomic",
- "static_cell",
-]
-
-[[package]]
-name = "embassy-task-watchdog-macros"
-version = "0.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29955d35d440bbef152b051b7beec91467ebf03c95739706c1e672bee626d3cf"
-dependencies = [
- "embassy-task-watchdog-numtasks",
- "proc-macro2",
- "quote",
- "syn 2.0.117",
-]
-
-[[package]]
-name = "embassy-task-watchdog-numtasks"
-version = "0.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ed4bab6647593e1c7fe903756620bc0bb4e1538f6289225ae5ec16b551952dd"
 
 [[package]]
 name = "embassy-time"
