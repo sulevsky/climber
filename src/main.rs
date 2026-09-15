@@ -209,7 +209,7 @@ async fn baro_reader(
         embassy_stm32::mode::Async,
         embassy_stm32::i2c::Master,
     >,
-) -> ! {
+) {
     let mut bme280 = AsyncBme280::new(i2c_baro, embassy_time::Delay);
     bme280.init().await.unwrap();
 

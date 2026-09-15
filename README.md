@@ -1,6 +1,23 @@
 # Climber
 Car climbs to a hill
 
+## Inspired by
+![](images/inspired_by.png)
+
+## Chasis
+Arduino Car
+![](images/chasis.png)
+
+## Stages
+1. Migrates from Arduino/C++ to STM32/Rust/Embassy - controlled from mobile app via BLE
+1. Added barometer, accelerometer/gyroscope
+1. Replaced mobile app control with controller from notebook (written in Python) for better control and logging/telemetry
+1. Migrated to N20 motors
+![N20](images/n20.jpeg)
+1. Migrated back to TT motors
+![TT](images/tt.jpeg)
+
+
 ## Hardware components
 ```mermaid
 ---
@@ -83,14 +100,14 @@ flowchart TD
 - [ ] integral component in PI
 - [x] create and move to the new repo
 - [x] N20 motors improve handling
-- [ ] migrate back from N20 motors
-- [ ] port to SpeedyBee
+- [x] migrate back from N20 motors
 - [ ] error handling and reconnects for accelerometer, baro and BLE
 - [ ] add led command shows task statuses
 - [ ] external configuration
 - [ ] beautify Python client, add doc
-- [x] mise run for client
 - [ ] record video
+- [x] mise run for client
 - [x] watchdog
 - [x] test watchdog
 - [x] remove watchdog
+- [ ] port to SpeedyBee

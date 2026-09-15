@@ -67,7 +67,7 @@ impl MainController {
                     )),
                     //right
                     'd' => Some(MotorsPower::new(
-                        increase_by_percent(self.current_speed.left, 30),
+                        increase_by_percent(self.current_speed.left, 20),
                         -self.current_speed.right,
                     )),
                     //start normal speed
