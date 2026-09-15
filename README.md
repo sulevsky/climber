@@ -98,8 +98,7 @@ flowchart TD
 
 ## Videos
 - [controlling](media/controlling.mov)
-
-- climbing
+- [auto climbing](media/auto_climbing.mov)
 
 ## TODO
 - [x] add diagram for data flow and components
