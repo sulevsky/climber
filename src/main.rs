@@ -97,7 +97,7 @@ async fn main(spawner: Spawner) {
         None,
         None,
         None,
-        embassy_stm32::time::Hertz::hz(2000),
+        embassy_stm32::time::Hertz::hz(40000),
         embassy_stm32::timer::low_level::CountingMode::EdgeAlignedUp,
     );
     let left_pwm = LEFT_PWM.init(left_pwm);
@@ -114,7 +114,7 @@ async fn main(spawner: Spawner) {
         None,
         Some(right_pwm),
         None,
-        embassy_stm32::time::Hertz::hz(2000),
+        embassy_stm32::time::Hertz::hz(40000),
         embassy_stm32::timer::low_level::CountingMode::EdgeAlignedUp,
     );
     let right_pwm = RIGHT_PWM.init(right_pwm);
@@ -144,8 +144,8 @@ async fn main(spawner: Spawner) {
         embassy_stm32::i2c::Config::default(),
     );
 
-    spawner.spawn(imu_reader(i2c_imu).unwrap());
-    spawner.spawn(baro_reader(i2c_baro).unwrap());
+    // spawner.spawn(imu_reader(i2c_imu).unwrap());
+    // spawner.spawn(baro_reader(i2c_baro).unwrap());
     spawner.spawn(controller_command_reader(uart_rx).unwrap());
     spawner.spawn(update_motor(motor).unwrap());
     spawner.spawn(main_controller().unwrap());
@@ -249,7 +249,7 @@ async fn main_controller() {
 #[embassy_executor::task]
 async fn heartbeat(mut led: Output<'static>) {
     loop {
-        info!("ok");
+        // info!("ok");
         Timer::after_secs(1).await;
         led.set_high();
         Timer::after_secs(1).await;

@@ -2,20 +2,20 @@
 Car climbs to a hill
 
 ## Inspired by
-![](images/inspired_by.png)
+![](media/inspired_by.png)
 
 ## Chasis
 Arduino Car
-![](images/chasis.png)
+![](media/chasis.png)
 
 ## Stages
 1. Migrates from Arduino/C++ to STM32/Rust/Embassy - controlled from mobile app via BLE
 1. Added barometer, accelerometer/gyroscope
 1. Replaced mobile app control with controller from notebook (written in Python) for better control and logging/telemetry
 1. Migrated to N20 motors
-![N20](images/n20.jpeg)
+![N20](media/n20.jpeg)
 1. Migrated back to TT motors
-![TT](images/tt.jpeg)
+![TT](media/tt.jpeg)
 
 
 ## Hardware components
@@ -95,6 +95,12 @@ flowchart TD
 
     heartbeat[Heartbeat task]
 ```
+
+## Videos
+- [controlling](media/controlling.mov)
+
+- climbing
+
 ## TODO
 - [x] add diagram for data flow and components
 - [ ] integral component in PI

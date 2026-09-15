@@ -12,8 +12,8 @@ const MAX_IN_MOTOR_VALUE: u32 = 255;
 const MIN_IN_MOTOR_VALUE: i16 = -255;
 const ABS_IN_PWM_RANGE: Range<u32> = 0..256;
 
-const CALIBRATED_PWM_VALUE_FORWARD: Range<u32> = 100..190;
-const CALIBRATED_PWM_VALUE_BACKWARD: Range<u32> = 100..211;
+const CALIBRATED_PWM_VALUE_FORWARD: Range<u32> = 0..210;
+const CALIBRATED_PWM_VALUE_BACKWARD: Range<u32> = 170..255;
 
 pub struct Motors<'d, CHL: GeneralInstance4Channel, CHR: GeneralInstance4Channel> {
     left_f_b: Output<'d>,
