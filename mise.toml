@@ -19,3 +19,6 @@ run = "probe-rs run --chip STM32F446RE target/thumbv7em-none-eabihf/debug/blinky
 [tasks.default]
 depends = "flash-monitor"
 
+[tasks.client]
+alias = "c"
+run = "(cd ble_client && source .venv/bin/activate && python client.py )"

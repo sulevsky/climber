@@ -46,38 +46,41 @@ flowchart TD
 title: Firmware components
 ---
 flowchart TD
-    A@{ shape: das, label: "CONTROL_COMMANDS_QUEUE" }
+    control_command_queue@{ shape: das, label: "control_command_queue" }
     controller_command_reader[controller_command_reader task]
     ble_uart[BLE UART]
-    controller_command_reader --> A
+    controller_command_reader --> control_command_queue
     ble_uart --> controller_command_reader
 
     imu_reader[IMU reader task]
     imu_i2c[IMU I2C]
-    imu_reader --> A
+    imu_reader --> control_command_queue
     imu_i2c --> imu_reader
 
     baro_reader[Barometer reader task]
     baro_i2c[Baro I2C]
-    baro_reader --[NOT IMPLEMENTED]--> A
+    baro_reader --[NOT IMPLEMENTED]--> control_command_queue
     baro_i2c --> baro_reader
 
-    main_controller[Controller task]
-    A --> main_controller
+    
+    subgraph main_controller[Controller task]
+        pi_controller["PI controller"]
+    end
+    control_command_queue --> main_controller
 
     update_motor[Update motor task]
     motor_driver[Motor driver]
     update_motor --> motor_driver
-    B@{ shape: das, label: "MOTOR_COMMANDS_QUEUE" }
+    motor_commands_signal@{ shape: das, label: "motor_commands_signal" }
 
-    B --> update_motor
-    main_controller --> B
+    motor_commands_signal --> update_motor
+    main_controller --> motor_commands_signal
 
     heartbeat[Heartbeat task]
 ```
 ## TODO
 - [x] add diagram for data flow and components
-- [ ] integral component in PID
+- [ ] integral component in PI
 - [x] create and move to the new repo
 - [x] N20 motors improve handling
 - [ ] migrate back from N20 motors
@@ -86,7 +89,7 @@ flowchart TD
 - [ ] add led command shows task statuses
 - [ ] external configuration
 - [ ] beautify Python client, add doc
-- [ ] mise run for client
+- [x] mise run for client
 - [ ] record video
 - [x] watchdog
 - [x] test watchdog
