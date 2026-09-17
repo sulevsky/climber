@@ -3,6 +3,7 @@
 
 mod baro;
 mod demo;
+mod health;
 mod imu;
 mod logger;
 mod main_controller;
@@ -24,15 +25,17 @@ use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel, signal::Signal,
 };
 use embassy_time::{Duration, Timer};
-use log::{error, info};
+use log::{error, info, warn};
 use panic_probe as _;
 use static_cell::StaticCell;
 
 use crate::{
     baro::{calculate_altitude, calibrated_pressure},
+    health::{log_health, update_baro_health, update_imu_health},
     imu::{IMU, Mpu6050IMU},
     main_controller::{Event, MainController},
     motor::{Motors, MotorsPower},
+    utils::{parse_bool, parse_u32},
 };
 
 bind_interrupts!(
@@ -56,6 +59,10 @@ static CONTROL_COMMANDS_QUEUE: Channel<CriticalSectionRawMutex, Event, 32> = Cha
 
 static LEFT_PWM: StaticCell<SimplePwm<'static, TIM3>> = StaticCell::new();
 static RIGHT_PWM: StaticCell<SimplePwm<'static, TIM2>> = StaticCell::new();
+
+const PWM_FREQUENCY: embassy_stm32::time::Hertz = embassy_stm32::time::Hertz::hz(40000);
+const CALIBRATED_PITCH_DEG: Option<f32> = Some(21.757889);
+const IMU_SMA_BUFFER_SIZE: usize = 20;
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -82,9 +89,9 @@ async fn main(spawner: Spawner) {
     )
     .unwrap()
     .split();
-    logger::init(Some(uart_tx)).unwrap();
+    logger::init(Some(uart_tx)).expect("Could not initialize logging");
     info!("Initializing PWM");
-    let left_f_b = Output::new(
+    let left_direction = Output::new(
         p.PA10,
         embassy_stm32::gpio::Level::Low,
         embassy_stm32::gpio::Speed::Low,
@@ -97,13 +104,13 @@ async fn main(spawner: Spawner) {
         None,
         None,
         None,
-        embassy_stm32::time::Hertz::hz(40000),
+        PWM_FREQUENCY,
         embassy_stm32::timer::low_level::CountingMode::EdgeAlignedUp,
     );
     let left_pwm = LEFT_PWM.init(left_pwm);
     let mut left_pwm = left_pwm.ch1();
     left_pwm.enable();
-    let right_f_b = Output::new(
+    let right_direction = Output::new(
         p.PB5,
         embassy_stm32::gpio::Level::Low,
         embassy_stm32::gpio::Speed::Low,
@@ -114,13 +121,13 @@ async fn main(spawner: Spawner) {
         None,
         Some(right_pwm),
         None,
-        embassy_stm32::time::Hertz::hz(40000),
+        PWM_FREQUENCY,
         embassy_stm32::timer::low_level::CountingMode::EdgeAlignedUp,
     );
     let right_pwm = RIGHT_PWM.init(right_pwm);
     let right_pwm = right_pwm.ch3();
 
-    let motor = motor::Motors::new(left_f_b, left_pwm, right_f_b, right_pwm);
+    let motor = motor::Motors::new(left_direction, left_pwm, right_direction, right_pwm);
 
     info!("Initializing I2C baro");
     let i2c_baro = embassy_stm32::i2c::I2c::new(
@@ -144,8 +151,8 @@ async fn main(spawner: Spawner) {
         embassy_stm32::i2c::Config::default(),
     );
 
-    // spawner.spawn(imu_reader(i2c_imu).unwrap());
-    // spawner.spawn(baro_reader(i2c_baro).unwrap());
+    spawner.spawn(imu_reader(i2c_imu).unwrap());
+    spawner.spawn(baro_reader(i2c_baro).unwrap());
     spawner.spawn(controller_command_reader(uart_rx).unwrap());
     spawner.spawn(update_motor(motor).unwrap());
     spawner.spawn(main_controller().unwrap());
@@ -178,23 +185,49 @@ async fn imu_reader(
     >,
 ) {
     let mut imu = Mpu6050IMU::new(i2c_imu).await;
-    let mut pitch = imu.pitch_only().await;
-    info!("pitch is {} rad", pitch);
-    info!("pitch is {} deg", pitch.to_degrees());
-    pitch = 14.691409;
-    info!("pitch hard coded to {} rad", pitch.to_degrees());
-    let mut imu_sma_buffer = [0f32; 20];
+    let pitch = imu.pitch_only().await;
+    if pitch.is_err() {
+        warn!("Could not setup IMU, IMU is down");
+        update_imu_health(false).await;
+        return;
+    } else {
+        update_imu_health(true).await;
+    }
+
+    let mut pitch = pitch.unwrap();
+    info!(
+        "Measured pitch is {} rad, {} deg",
+        pitch,
+        pitch.to_degrees()
+    );
+    if CALIBRATED_PITCH_DEG.is_some() {
+        pitch = CALIBRATED_PITCH_DEG.unwrap().to_radians();
+        info!(
+            "Using calibrated pitch instead of measured is {} rads, {} deg",
+            pitch,
+            pitch.to_degrees()
+        );
+    }
+    let mut imu_sma_buffer = [0f32; IMU_SMA_BUFFER_SIZE];
     loop {
-        for i in 0..imu_sma_buffer.len() {
+        let mut i = 0;
+        while i < imu_sma_buffer.len() {
             let current_heading = imu.heading(pitch).await;
+            if let Ok(h) = current_heading {
+                update_imu_health(true).await;
+                imu_sma_buffer[i] = h;
+                i += 1;
+            } else {
+                info!("Could not fetch heading from IMU");
+                update_imu_health(false).await;
+            }
             Timer::after_millis(10).await;
-            imu_sma_buffer[i] = current_heading;
         }
         let heading = imu_sma_buffer.iter().sum::<f32>() / imu_sma_buffer.len() as f32;
         info!(
-            "smoothed heading is {} -> {} deg",
+            "Heading (smoothed) is {} rads, {} deg",
             heading,
-            heading.to_degrees() as i32
+            heading.to_degrees()
         );
         CONTROL_COMMANDS_QUEUE
             .send(Event::HeadingUpdated(heading))
@@ -228,6 +261,7 @@ async fn baro_reader(
     info!("Calibrating pressure");
     let initial_pressure = calibrated_pressure(&mut bme280).await;
     info!("Calibrated pressure: {} Pa", initial_pressure);
+    update_baro_health(true).await;
     loop {
         let current_pressure = calibrated_pressure(&mut bme280).await;
         info!(
@@ -249,7 +283,7 @@ async fn main_controller() {
 #[embassy_executor::task]
 async fn heartbeat(mut led: Output<'static>) {
     loop {
-        // info!("ok");
+        log_health().await;
         Timer::after_secs(1).await;
         led.set_high();
         Timer::after_secs(1).await;

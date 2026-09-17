@@ -1,5 +1,5 @@
 # Climber
-Car climbs to a hill
+A car climbs a hill
 
 ## Inspired by
 ![](media/inspired_by.png)
@@ -8,8 +8,27 @@ Car climbs to a hill
 Arduino Car
 ![](media/chasis.png)
 
+## Requirements
+- Mise
+- Rust, `probe-rs`
+- `uv`
+
+## Quick start
+- flash
+`mise run flash-monitor`
+- setup client
+```
+cd ble_client
+uv venv
+source .venv/bin/activate
+uv pip install -r requirements.txt 
+```
+- open client
+`mise run client`
+
+
 ## Stages
-1. Migrates from Arduino/C++ to STM32/Rust/Embassy - controlled from mobile app via BLE
+1. Migrated from Arduino/C++ to STM32/Rust/Embassy - controlled from a mobile app via BLE
 1. Added barometer, accelerometer/gyroscope
 1. Replaced mobile app control with controller from notebook (written in Python) for better control and logging/telemetry
 1. Migrated to N20 motors
@@ -94,25 +113,10 @@ flowchart TD
     main_controller --> motor_commands_signal
 
     heartbeat[Heartbeat task]
+    heartbeat -.-> baro_i2c
+    heartbeat -.-> imu_i2c
 ```
 
 ## Videos
 - [controlling](media/controlling.mov)
 - [auto climbing](media/auto_climbing.mov)
-
-## TODO
-- [x] add diagram for data flow and components
-- [ ] integral component in PI
-- [x] create and move to the new repo
-- [x] N20 motors improve handling
-- [x] migrate back from N20 motors
-- [ ] error handling and reconnects for accelerometer, baro and BLE
-- [ ] add led command shows task statuses
-- [ ] external configuration
-- [ ] beautify Python client, add doc
-- [ ] record video
-- [x] mise run for client
-- [x] watchdog
-- [x] test watchdog
-- [x] remove watchdog
-- [ ] port to SpeedyBee

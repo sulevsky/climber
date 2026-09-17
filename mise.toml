@@ -14,7 +14,7 @@ run = "cargo build"
 [tasks.flash-monitor]
 depends = "build"
 alias = "fm"
-run = "probe-rs run --chip STM32F446RE target/thumbv7em-none-eabihf/debug/blinky_esp_rust"
+run = "probe-rs run --chip STM32F446RE target/thumbv7em-none-eabihf/debug/climber"
 
 [tasks.default]
 depends = "flash-monitor"

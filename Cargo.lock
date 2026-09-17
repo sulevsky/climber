@@ -72,30 +72,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b588b76d00fde79687d7646a9b5bdf3cc0f655e0bbd080335a95d7e96f3587da"
 
 [[package]]
-name = "blinky_esp_rust"
-version = "0.1.0"
-dependencies = [
- "bme280-rs",
- "cortex-m",
- "cortex-m-rt",
- "critical-section",
- "embassy-executor",
- "embassy-stm32",
- "embassy-sync",
- "embassy-time",
- "embedded-hal 1.0.0",
- "embedded-hal-async",
- "fugit",
- "heapless",
- "log",
- "micromath",
- "mpu6050-async",
- "panic-probe",
- "rtt-target",
- "static_cell",
-]
-
-[[package]]
 name = "block-device-driver"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -143,6 +119,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aa79e62e7697b8e29b513a68abacf485adcd1fe8284a4316c5ae868e6633327"
 dependencies = [
  "num-traits",
+]
+
+[[package]]
+name = "climber"
+version = "0.1.0"
+dependencies = [
+ "bme280-rs",
+ "cortex-m",
+ "cortex-m-rt",
+ "critical-section",
+ "embassy-executor",
+ "embassy-stm32",
+ "embassy-sync",
+ "embassy-time",
+ "embedded-hal 1.0.0",
+ "embedded-hal-async",
+ "fugit",
+ "heapless",
+ "log",
+ "micromath",
+ "mpu6050-async",
+ "panic-probe",
+ "rtt-target",
+ "static_cell",
 ]
 
 [[package]]

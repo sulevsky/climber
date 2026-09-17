@@ -3,6 +3,8 @@ use embassy_time::{Delay, Timer};
 use log::{error, info};
 use micromath::F32Ext;
 
+use crate::health::update_baro_health;
+
 pub fn calculate_altitude(base_pressure: f32, current_pressure: f32) -> f32 {
     44330.0 * (1.0 - (current_pressure / base_pressure).powf(0.1903))
 }
@@ -17,8 +19,10 @@ pub async fn calibrated_pressure(
     for i in 0..100 {
         if let Ok(Some(pressure)) = bme280.read_pressure().await {
             buf[i] = pressure;
+            update_baro_health(true).await;
         } else {
             error!("Failed pressure reading");
+            update_baro_health(false).await;
         }
         Timer::after_millis(10).await;
     }

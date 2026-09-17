@@ -1,5 +1,5 @@
 [package]
-name = "blinky_esp_rust"
+name = "climber"
 version = "0.1.0"
 edition = "2024"
 
@@ -46,7 +46,7 @@ mpu6050-async = "0.1.0"
 heapless = "0.9.3"
 
 [[bin]]
-name = "blinky_esp_rust"
+name = "climber"
 test = false
 bench = false
 debug = true

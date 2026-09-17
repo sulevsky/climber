@@ -2,7 +2,7 @@ use log::{error, info};
 
 use crate::{MOTOR_COMMANDS_SIGNAL, motor::MotorsPower};
 
-pub const NORMAL_SPEED: i16 = 150;
+pub const NORMAL_SPEED: i16 = 85;
 
 pub enum Event {
     UserCommand(char),
@@ -12,6 +12,7 @@ pub enum Event {
 pub struct MainController {
     is_heading_alignment_mode: bool,
     current_speed: MotorsPower,
+    pi_controller: PIController,
 }
 
 impl MainController {
@@ -19,12 +20,12 @@ impl MainController {
         Self {
             is_heading_alignment_mode: false,
             current_speed: MotorsPower::stop(),
+            pi_controller: PIController::new(),
         }
     }
     pub fn on_event(&mut self, event: Event) {
         match event {
             Event::UserCommand(controller_command) => {
-                // non-motor commands
                 let motor_signal = match controller_command {
                     // accell
                     'z' => {
@@ -63,11 +64,11 @@ impl MainController {
                     //left
                     'a' => Some(MotorsPower::new(
                         -self.current_speed.left,
-                        increase_by_percent(self.current_speed.right, 30),
+                        self.current_speed.right,
                     )),
                     //right
                     'd' => Some(MotorsPower::new(
-                        increase_by_percent(self.current_speed.left, 20),
+                        self.current_speed.left,
                         -self.current_speed.right,
                     )),
                     //start normal speed
@@ -90,38 +91,60 @@ impl MainController {
             }
             Event::HeadingUpdated(heading) => {
                 if self.is_heading_alignment_mode {
-                    let correction = calculate_correction(heading, self.current_speed.clone());
+                    let correction = self
+                        .pi_controller
+                        .calculate_correction(heading, self.current_speed.clone());
                     MOTOR_COMMANDS_SIGNAL.signal(correction);
                 }
             }
         }
     }
 }
-const P_COEFF: f32 = 10.0;
-fn calculate_correction(heading_rad: f32, current_speed: MotorsPower) -> MotorsPower {
-    let heading = heading_rad.to_degrees().clamp(0.0, 180.0);
-    let error = heading - 90.0;
-    let force = error.abs() / 90.0;
-    info!("Error {}, h: {}", error, heading);
-    if error < 0.0 {
-        let l = (20.0 * P_COEFF * force) as i16;
-        info!("L increase {}%", l);
-        MotorsPower::new(
-            increase_by_percent(current_speed.left, l).clamp(0, 255),
-            increase_by_percent(current_speed.right, 0),
-        )
-    } else if error > 0.0 {
-        let r = (80.0 * P_COEFF * force) as i16;
-        info!("R increase {}%", r);
-        MotorsPower::new(
-            increase_by_percent(current_speed.left, -30),
-            increase_by_percent(current_speed.right, r).clamp(0, 255),
-        )
-    } else {
-        current_speed
-    }
+struct PIController {
+    cummulative_error: f32,
 }
 
+impl PIController {
+    const P_COEFF: f32 = 200.0;
+    const I_COEFF: f32 = 5.0;
+    fn new() -> Self {
+        Self {
+            cummulative_error: 0.0,
+        }
+    }
+    fn calculate_correction(
+        &mut self,
+        heading_rad: f32,
+        current_speed: MotorsPower,
+    ) -> MotorsPower {
+        let heading = heading_rad.to_degrees().clamp(0.0, 180.0);
+        let error = heading - 90.0;
+        let relative_error = error / 90.0;
+        self.cummulative_error += relative_error;
+        let p_component = Self::P_COEFF * relative_error;
+        let i_component = Self::I_COEFF * self.cummulative_error;
+        let correction = p_component + i_component;
+        info!(
+            "error: {} deg, heading: {} deg, P {}, I {}, sum {}",
+            error, heading, p_component, i_component, correction
+        );
+        if correction < -1.0 {
+            info!("L increase {}%", correction);
+            MotorsPower::new(
+                increase_by_percent(current_speed.left, correction.abs() as i16).clamp(0, 255),
+                current_speed.right,
+            )
+        } else if correction > 1.0 {
+            info!("R increase {}%", correction);
+            MotorsPower::new(
+                current_speed.left,
+                increase_by_percent(current_speed.right, correction as i16).clamp(0, 255),
+            )
+        } else {
+            current_speed
+        }
+    }
+}
 fn increase_by_percent(initial: i16, by_percents: i16) -> i16 {
     (initial as i32 * (by_percents as i32 + 100) / 100) as i16
 }
